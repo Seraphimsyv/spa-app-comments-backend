@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  app:
+    build: ./
+    ports:
+      - "3000:3000"
+      - "8010:8010"
+    depends_on:
+      - postgres
+      - redis    
+    environment:
+      NEST_HOST: localhost
+      NEST_PORT: 3000
+      NEST_UPLOAD_DIR: ./uploads
+      JWT_SECRET: secret
+      JWT_EXPIRES_IN: 7d
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_NAME: spa_comments
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+  postgres:
+    image: postgres:latest
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: spa_comments
+  redis:
+    image: redis:latest
