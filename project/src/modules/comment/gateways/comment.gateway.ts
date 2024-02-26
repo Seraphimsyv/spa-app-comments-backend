@@ -98,7 +98,6 @@ export class CommentGateway extends AbstractGateway {
     } else {
       try {
         const result = await this.service.createOne(comment);
-
         this.server.to(client.id).emit('commentCreated', result);
       } catch (err) {
         this.logger.error('ws create comment error: ' + err.message);

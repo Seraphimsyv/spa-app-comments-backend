@@ -23,7 +23,7 @@ import { CacheModule } from '@nestjs/cache-manager';
     }),
     CacheModule.register({
       isGlobal: true,
-      ttl: 1000 * 60 * 1,
+      ttl: 1000 * 30 * 1,
     }),
     EventEmitterModule.forRoot(),
     DatabaseModule,

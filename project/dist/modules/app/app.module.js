@@ -35,7 +35,7 @@ exports.AppModule = AppModule = __decorate([
             }),
             cache_manager_1.CacheModule.register({
                 isGlobal: true,
-                ttl: 1000 * 60 * 1,
+                ttl: 1000 * 30 * 1,
             }),
             event_emitter_1.EventEmitterModule.forRoot(),
             database_module_1.DatabaseModule,

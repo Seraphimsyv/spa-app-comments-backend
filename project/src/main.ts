@@ -6,9 +6,9 @@ import { NEST_CONSTANTS } from './common/constant';
 
 const bootstrap = async () => {
   const app = await NestFactory.create(AppModule);
-  // app.enableCors({
-  //   origin: '*',
-  // });
+  app.enableCors({
+    origin: '*',
+  });
 
   app.useGlobalPipes(
     new ValidationPipe({

@@ -7,6 +7,9 @@ const xssValidation_pipe_1 = require("./pipes/xssValidation.pipe");
 const constant_1 = require("./common/constant");
 const bootstrap = async () => {
     const app = await core_1.NestFactory.create(app_module_1.AppModule);
+    app.enableCors({
+        origin: '*',
+    });
     app.useGlobalPipes(new common_1.ValidationPipe({
         transform: true,
         transformOptions: {
