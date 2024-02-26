@@ -4,14 +4,15 @@ services:
   app:
     build: ./
     ports:
-      - "3000:3000"
+      - "8000:8000"
       - "8010:8010"
+      - "8020:8020"
     depends_on:
       - postgres
       - redis    
     environment:
       NEST_HOST: localhost
-      NEST_PORT: 3000
+      NEST_PORT: 8000
       NEST_UPLOAD_DIR: ./uploads
       JWT_SECRET: secret
       JWT_EXPIRES_IN: 7d

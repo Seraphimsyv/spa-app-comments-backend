@@ -22,6 +22,20 @@ export class UtilsController {
   }
   /**
    *
+   * @param dir
+   * @param filename
+   * @param res
+   */
+  @Get('/download/file/:dir/:filename')
+  async downloadFile(
+    @Param('dir') dir: string,
+    @Param('filename') filename: string,
+    @Res() res: Response,
+  ) {
+    return this.service.downloadFile(res, dir, filename);
+  }
+  /**
+   *
    * @returns
    */
   @Get('/get/captcha')

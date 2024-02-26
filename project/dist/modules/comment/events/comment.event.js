@@ -1,6 +1,9 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.CommentCreatedEvent = void 0;
+exports.CommentCreatedEvent = exports.CommentCreateCacheEvent = void 0;
+class CommentCreateCacheEvent {
+}
+exports.CommentCreateCacheEvent = CommentCreateCacheEvent;
 class CommentCreatedEvent {
 }
 exports.CommentCreatedEvent = CommentCreatedEvent;

@@ -11,44 +11,44 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-var CommentGateway_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.CommentGateway = void 0;
-const common_1 = require("@nestjs/common");
 const websockets_1 = require("@nestjs/websockets");
 const socket_io_1 = require("socket.io");
 const comment_service_1 = require("../services/comment.service");
 const utils_1 = require("../../../common/utils");
-let CommentGateway = CommentGateway_1 = class CommentGateway {
-    constructor(service) {
+const auth_services_1 = require("../../auth/services/auth.services");
+const abstract_1 = require("../../../common/abstract");
+let CommentGateway = class CommentGateway extends abstract_1.AbstractGateway {
+    constructor(service, authService) {
+        super();
         this.service = service;
-        this.logger = new common_1.Logger(CommentGateway_1.name);
+        this.authService = authService;
     }
-    afterInit() {
-        this.logger.log('WebSocket server started!');
-    }
-    handleConnection(client) {
-        this.logger.log(`Client with id: ${client.id} connected!`);
-    }
-    handleDisconnect(client) {
-        this.logger.log(`Client with id: ${client.id} disconnected!`);
-    }
-    async handleGetComments(data) {
-        const { page, limit } = data;
+    async handleGetComments(data, client) {
+        const { page, limit, orderBy } = data;
         const pageOffset = page ? page : 1;
         const limitCount = limit ? limit : 25;
-        const comments = await this.service.findMany(pageOffset, limitCount);
-        this.server.emit('sendComments', comments);
+        const order = orderBy ? orderBy : { column: 'createdAt', sort: 'DESC' };
+        const comments = await this.service.findMany(pageOffset, limitCount, {}, order);
+        this.proccessData(comments);
+        this.server.to(client.id).emit('reciveComments', comments);
     }
-    async handleUploadFile(data) {
+    async handleUploadFile(data, client) {
         const { comment, file } = data;
+        if (comment.author) {
+            const user = await this.authService.validateToken(comment.author);
+            if (!user)
+                return this.server.to(client.id).emit('jwtError', 'Jwt token expired');
+            comment.author = user;
+        }
         if (file) {
             const convertedFile = await (0, utils_1.convertFileDataToFileObject)(data.file);
             const fileValid = await (0, utils_1.validationFile)(convertedFile);
             if (fileValid) {
                 try {
                     const result = await this.service.createOne(comment, convertedFile);
-                    this.server.emit('commentCreated', result);
+                    this.server.to(client.id).emit('commentCreated', result);
                 }
                 catch (err) {
                     this.logger.error('ws create comment with file error: ' + err.message);
@@ -58,7 +58,7 @@ let CommentGateway = CommentGateway_1 = class CommentGateway {
         else {
             try {
                 const result = await this.service.createOne(comment);
-                this.server.emit('commentCreated', result);
+                this.server.to(client.id).emit('commentCreated', result);
             }
             catch (err) {
                 this.logger.error('ws create comment error: ' + err.message);
@@ -74,24 +74,27 @@ __decorate([
 __decorate([
     (0, websockets_1.SubscribeMessage)('getComments'),
     __param(0, (0, websockets_1.MessageBody)()),
+    __param(1, (0, websockets_1.ConnectedSocket)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
+    __metadata("design:paramtypes", [Object, socket_io_1.Socket]),
     __metadata("design:returntype", Promise)
 ], CommentGateway.prototype, "handleGetComments", null);
 __decorate([
     (0, websockets_1.SubscribeMessage)('createComment'),
     __param(0, (0, websockets_1.MessageBody)()),
+    __param(1, (0, websockets_1.ConnectedSocket)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
+    __metadata("design:paramtypes", [Object, socket_io_1.Socket]),
     __metadata("design:returntype", Promise)
 ], CommentGateway.prototype, "handleUploadFile", null);
-exports.CommentGateway = CommentGateway = CommentGateway_1 = __decorate([
-    (0, websockets_1.WebSocketGateway)(8010, {
+exports.CommentGateway = CommentGateway = __decorate([
+    (0, websockets_1.WebSocketGateway)(8020, {
         namespace: '/ws/comment',
         cors: {
             origin: '*',
         },
     }),
-    __metadata("design:paramtypes", [comment_service_1.CommentService])
+    __metadata("design:paramtypes", [comment_service_1.CommentService,
+        auth_services_1.AuthService])
 ], CommentGateway);
 //# sourceMappingURL=comment.gateway.js.map

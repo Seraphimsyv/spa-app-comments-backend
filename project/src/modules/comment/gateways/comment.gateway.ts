@@ -1,9 +1,6 @@
-import { Logger } from '@nestjs/common';
 import {
+  ConnectedSocket,
   MessageBody,
-  OnGatewayConnection,
-  OnGatewayDisconnect,
-  OnGatewayInit,
   SubscribeMessage,
   WebSocketGateway,
   WebSocketServer,
@@ -15,42 +12,25 @@ import {
   IWsCommentCreateData,
   IWsCommentGetMany,
 } from '../interfaces/comment.interfaces';
+import { AuthService } from 'src/modules/auth/services/auth.services';
+import { AbstractGateway } from 'src/common/abstract';
 
-@WebSocketGateway(8010, {
+@WebSocketGateway(8020, {
   namespace: '/ws/comment',
   cors: {
     origin: '*',
   },
 })
-export class CommentGateway
-  implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
-{
-  constructor(private readonly service: CommentService) {}
-
-  private readonly logger: Logger = new Logger(CommentGateway.name);
+export class CommentGateway extends AbstractGateway {
+  constructor(
+    private readonly service: CommentService,
+    private readonly authService: AuthService,
+  ) {
+    super();
+  }
 
   @WebSocketServer()
   server: Server;
-  /**
-   *
-   */
-  afterInit() {
-    this.logger.log('WebSocket server started!');
-  }
-  /**
-   *
-   * @param client
-   */
-  handleConnection(client: Socket) {
-    this.logger.log(`Client with id: ${client.id} connected!`);
-  }
-  /**
-   *
-   * @param client
-   */
-  handleDisconnect(client: any) {
-    this.logger.log(`Client with id: ${client.id} disconnected!`);
-  }
   /**
    *
    * @param client
@@ -58,13 +38,24 @@ export class CommentGateway
    * @returns
    */
   @SubscribeMessage('getComments')
-  async handleGetComments(@MessageBody() data: IWsCommentGetMany) {
-    const { page, limit } = data;
+  async handleGetComments(
+    @MessageBody() data: IWsCommentGetMany,
+    @ConnectedSocket() client: Socket,
+  ) {
+    const { page, limit, orderBy } = data;
     const pageOffset = page ? page : 1;
     const limitCount = limit ? limit : 25;
-    const comments = await this.service.findMany(pageOffset, limitCount);
+    const order = orderBy ? orderBy : { column: 'createdAt', sort: 'DESC' };
+    const comments = await this.service.findMany(
+      pageOffset,
+      limitCount,
+      {},
+      order,
+    );
 
-    this.server.emit('sendComments', comments);
+    this.proccessData(comments);
+
+    this.server.to(client.id).emit('reciveComments', comments);
   }
   /**
    *
@@ -73,8 +64,20 @@ export class CommentGateway
    * @returns
    */
   @SubscribeMessage('createComment')
-  async handleUploadFile(@MessageBody() data: IWsCommentCreateData) {
+  async handleUploadFile(
+    @MessageBody() data: IWsCommentCreateData,
+    @ConnectedSocket() client: Socket,
+  ) {
     const { comment, file } = data;
+
+    if (comment.author) {
+      const user = await this.authService.validateToken(comment.author);
+
+      if (!user)
+        return this.server.to(client.id).emit('jwtError', 'Jwt token expired');
+
+      comment.author = user;
+    }
 
     if (file) {
       const convertedFile = await convertFileDataToFileObject(data.file);
@@ -85,7 +88,7 @@ export class CommentGateway
         try {
           const result = await this.service.createOne(comment, convertedFile);
 
-          this.server.emit('commentCreated', result);
+          this.server.to(client.id).emit('commentCreated', result);
         } catch (err) {
           this.logger.error(
             'ws create comment with file error: ' + err.message,
@@ -96,7 +99,7 @@ export class CommentGateway
       try {
         const result = await this.service.createOne(comment);
 
-        this.server.emit('commentCreated', result);
+        this.server.to(client.id).emit('commentCreated', result);
       } catch (err) {
         this.logger.error('ws create comment error: ' + err.message);
       }

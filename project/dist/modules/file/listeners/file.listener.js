@@ -18,11 +18,29 @@ let FileListener = FileListener_1 = class FileListener {
     constructor() {
         this.logger = new common_1.Logger(FileListener_1.name);
     }
+    async handleFileCreated(event) {
+        this.logger.debug(`File created event: ${JSON.stringify(event)}`);
+    }
+    async handleFileResized(event) {
+        this.logger.debug(`File resized event: ${JSON.stringify(event)}`);
+    }
     async handleFileUploaded(event) {
         this.logger.debug(`File uploaded event: ${JSON.stringify(event)}`);
     }
 };
 exports.FileListener = FileListener;
+__decorate([
+    (0, event_emitter_1.OnEvent)('file.created'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [file_event_1.FileCreatedEvent]),
+    __metadata("design:returntype", Promise)
+], FileListener.prototype, "handleFileCreated", null);
+__decorate([
+    (0, event_emitter_1.OnEvent)('file.resized'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [file_event_1.FileResizedEvent]),
+    __metadata("design:returntype", Promise)
+], FileListener.prototype, "handleFileResized", null);
 __decorate([
     (0, event_emitter_1.OnEvent)('file.uploaded'),
     __metadata("design:type", Function),

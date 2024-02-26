@@ -32,6 +32,8 @@ export class AuthService {
 
     if (!isCompare) throw new UnauthorizedException();
 
+    console.log(user);
+
     /** Prepare payload */
     const payload = { ...user, password: undefined };
 

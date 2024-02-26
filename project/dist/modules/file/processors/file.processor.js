@@ -22,7 +22,7 @@ let FileProcessor = FileProcessor_1 = class FileProcessor {
     async saveFile(job) {
         const file = await this.fileService.saveFile(job.data.file);
         try {
-            return { filePath: file.path };
+            return { file: file };
         }
         catch (err) {
             this.logger.warn('Invalid result');

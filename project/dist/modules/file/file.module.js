@@ -13,12 +13,17 @@ const file_queue_service_1 = require("./services/file-queue.service");
 const bull_1 = require("@nestjs/bull");
 const file_processor_1 = require("./processors/file.processor");
 const file_listener_1 = require("./listeners/file.listener");
+const typeorm_1 = require("@nestjs/typeorm");
+const file_entity_1 = require("./entities/file.entity");
 let FileModule = class FileModule {
 };
 exports.FileModule = FileModule;
 exports.FileModule = FileModule = __decorate([
     (0, common_1.Module)({
-        imports: [bull_1.BullModule.registerQueueAsync({ name: 'file' })],
+        imports: [
+            typeorm_1.TypeOrmModule.forFeature([file_entity_1.File]),
+            bull_1.BullModule.registerQueueAsync({ name: 'file' }),
+        ],
         providers: [file_service_1.FileService, file_queue_service_1.FileQueueService, file_processor_1.FileProcessor, file_listener_1.FileListener],
         exports: [file_service_1.FileService, file_queue_service_1.FileQueueService],
     })

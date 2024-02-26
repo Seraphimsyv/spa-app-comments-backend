@@ -8,18 +8,19 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AppModule = void 0;
 const common_1 = require("@nestjs/common");
-const comment_module_1 = require("../comment/comment.module");
-const database_module_1 = require("../database/database.module");
 const event_emitter_1 = require("@nestjs/event-emitter");
 const bull_1 = require("@nestjs/bull");
+const core_1 = require("@nestjs/core");
+const password_interceptor_1 = require("../../interceptors/password.interceptor");
+const file_module_1 = require("../file/file.module");
 const user_module_1 = require("../user/user.module");
 const utils_controller_1 = require("./controllers/utils.controller");
 const utils_service_1 = require("./services/utils.service");
 const auth_module_1 = require("../auth/auth.module");
-const core_1 = require("@nestjs/core");
-const password_interceptor_1 = require("../../interceptors/password.interceptor");
-const file_module_1 = require("../file/file.module");
+const comment_module_1 = require("../comment/comment.module");
+const database_module_1 = require("../database/database.module");
 const constant_1 = require("../../common/constant");
+const cache_manager_1 = require("@nestjs/cache-manager");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -31,6 +32,10 @@ exports.AppModule = AppModule = __decorate([
                     host: constant_1.REDIS_CONSTANTS.HOST,
                     port: constant_1.REDIS_CONSTANTS.PORT,
                 },
+            }),
+            cache_manager_1.CacheModule.register({
+                isGlobal: true,
+                ttl: 1000 * 60 * 1,
             }),
             event_emitter_1.EventEmitterModule.forRoot(),
             database_module_1.DatabaseModule,
@@ -44,7 +49,7 @@ exports.AppModule = AppModule = __decorate([
             utils_service_1.UtilsService,
             {
                 provide: core_1.APP_INTERCEPTOR,
-                useClass: password_interceptor_1.PasswordInterceptor,
+                useClass: password_interceptor_1.PasswordHtppInterceptor,
             },
         ],
     })

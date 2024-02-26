@@ -31,12 +31,44 @@ export class UtilsService {
         return res.status(404).send('File not found!');
       }
 
-      const fileStream = fs.createReadStream(filePath);
-      fileStream.pipe(res);
+      if (dir === 'images') {
+        const fileStream = fs.createReadStream(filePath);
+        fileStream.pipe(res);
+      } else {
+        const fileContent = fs.readFileSync(filePath, 'utf-8');
+
+        return res.status(200).send(fileContent);
+      }
     } catch (error) {
       this.logger.error(`Error serving file: ${error}`);
 
       throw new InternalServerErrorException(error, 'Error serving file');
+    }
+  }
+  /**
+   *
+   * @param res
+   * @param dir
+   * @param filename
+   * @returns
+   */
+  async downloadFile(
+    res: Response,
+    dir: string,
+    filename: string,
+  ): Promise<Response> {
+    try {
+      const filePath: string = `${NEST_CONSTANTS.UPLOAD_DIR}/${dir}/${filename}`;
+
+      if (!fs.existsSync(filePath)) {
+        return res.status(404).send('File not found!');
+      }
+
+      res.setHeader('Content-Disposition', `attachment; filename=${filename}`);
+      res.setHeader('Content-Type', 'text/plain');
+      res.download(filePath);
+    } catch (err) {
+      console.log(err);
     }
   }
   /**

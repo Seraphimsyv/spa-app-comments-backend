@@ -1,12 +1,15 @@
 import {
   Column,
   Entity,
+  JoinColumn,
   ManyToOne,
   OneToMany,
+  OneToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { User } from '../../user/entities/user.entity';
 import { IAnonymUser } from 'src/common/interfaces';
+import { File } from 'src/modules/file/entities/file.entity';
 
 @Entity()
 export class Comment {
@@ -16,13 +19,14 @@ export class Comment {
   @Column({ type: 'text' })
   public text: string;
 
-  @Column({ type: 'text', nullable: true })
-  public filePath?: string;
+  @OneToOne(() => File, { nullable: true })
+  @JoinColumn()
+  public file?: File;
 
-  @ManyToOne(() => Comment, (comment) => comment.parent, { nullable: true })
+  @ManyToOne(() => Comment, (comment) => comment.comments, { nullable: true })
   public parent?: Comment;
 
-  @OneToMany(() => Comment, (comment) => comment.comments)
+  @OneToMany(() => Comment, (comment) => comment.parent)
   public comments: Comment[];
 
   @ManyToOne(() => User, (author) => author.comments, { nullable: true })

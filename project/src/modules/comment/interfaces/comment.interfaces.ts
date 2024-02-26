@@ -15,6 +15,7 @@ export interface ICommentCreateData {
 export interface IWsCommentGetMany {
   page?: number;
   limit?: number;
+  orderBy?: { column: string; sort: 'DESC' | 'ASC' };
 }
 
 export interface IWsCommentCreateData {

@@ -5,7 +5,7 @@ export declare class CommentController {
     private readonly service;
     constructor(service: CommentService);
     getOne(id: number): Promise<import("../entities/comment.entity").Comment>;
-    getMany(query?: CommentGetManyDto): Promise<import("../entities/comment.entity").Comment[]>;
+    getMany(query?: CommentGetManyDto): Promise<any>;
     createOne(req: any, file: Express.Multer.File, dto: CommentCreateOneDto): Promise<import("../entities/comment.entity").Comment>;
     updateOne(dto: CommentUpdateOneDto): Promise<import("../entities/comment.entity").Comment>;
     deleteOne(dto: CommentDeleteOneDto): Promise<import("../entities/comment.entity").Comment>;

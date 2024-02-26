@@ -1,79 +1,60 @@
 import {
+  ConnectedSocket,
   MessageBody,
-  OnGatewayConnection,
-  OnGatewayDisconnect,
-  OnGatewayInit,
   SubscribeMessage,
   WebSocketGateway,
   WebSocketServer,
 } from '@nestjs/websockets';
 import { AuthService } from '../services/auth.services';
-import { Server } from 'http';
-import { Logger } from '@nestjs/common';
+import { Server, Socket } from 'socket.io';
 import { IWsAuthLogin, IWsAuthSignin } from '../interfaces/auth.interface';
 import { UserService } from 'src/modules/user/services/user.service';
+import { AbstractGateway } from 'src/common/abstract';
 
-@WebSocketGateway(8020, {
+@WebSocketGateway(8010, {
   namespace: '/ws/auth',
   cors: {
     origin: '*',
   },
 })
-export class AuthGateway
-  implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
-{
+export class AuthGateway extends AbstractGateway {
   constructor(
     private readonly service: AuthService,
     private readonly userService: UserService,
-  ) {}
-
-  private readonly logger: Logger = new Logger(AuthGateway.name);
+  ) {
+    super();
+  }
 
   @WebSocketServer()
   server: Server;
-  /**
-   *
-   * @param server
-   */
-  afterInit() {
-    this.logger.log('WebSocket server started!');
-  }
-  /**
-   *
-   * @param client
-   * @param args
-   */
-  handleConnection(client: any) {
-    this.logger.log(`Client with id: ${client.id} connected!`);
-  }
-  /**
-   *
-   * @param client
-   */
-  handleDisconnect(client: any) {
-    this.logger.log(`Client with id: ${client.id} disconnected!`);
-  }
   /**
    *
    * @param data
    * @returns
    */
   @SubscribeMessage('getProfile')
-  async handleGetProfile(@MessageBody() data: { token: string }) {
+  async handleGetProfile(
+    @MessageBody() data: { token: string },
+    @ConnectedSocket() client: Socket,
+  ) {
     const { token } = data;
 
-    if (!token) return this.server.emit('profileError', 'token required!');
+    if (!token)
+      return this.server.to(client.id).emit('profileError', 'token required!');
 
     try {
       const payload = await this.service.validateToken(token);
       const user = await this.userService.findOne({ id: payload.id });
 
-      if (!user) return this.server.emit('profileError', 'User not found');
+      if (!user)
+        return this.server.to(client.id).emit('profileError', 'User not found');
 
-      this.server.emit('profile', { ...user, password: undefined });
+      this.proccessData(user);
+
+      this.server.to(client.id).emit('profile', user);
     } catch (err) {
       this.logger.error(`(getProfile) handle error: ${err.message}`);
-      this.server.emit('profileError', err.message);
+      this.server.to(client.id).emit('profileError', err.message);
     }
   }
   /**
@@ -81,20 +62,24 @@ export class AuthGateway
    * @param data
    */
   @SubscribeMessage('logIn')
-  async handleLogIn(@MessageBody() data: IWsAuthLogin) {
+  async handleLogIn(
+    @MessageBody() data: IWsAuthLogin,
+    @ConnectedSocket() client: Socket,
+  ) {
     if (!data.username)
-      return this.server.emit('logInError', 'username required!');
+      return this.server.to(client.id).emit('logInError', 'username required!');
 
     if (!data.password)
-      return this.server.emit('logInError', 'password required!');
+      return this.server.to(client.id).emit('logInError', 'password required!');
 
     try {
       const token = await this.service.logIn(data);
 
-      this.server.emit('jwtToken', token);
+      this.server.to(client.id).emit('jwtToken', token);
     } catch (err) {
       this.logger.error(`(logInError) handle error: ${err.message}`);
-      this.server.emit('logInError', err.message);
+      console.log(client);
+      this.server.to(client.id).emit('logInError', err.message);
     }
   }
   /**
@@ -102,22 +87,30 @@ export class AuthGateway
    * @param data
    */
   @SubscribeMessage('signIn')
-  async handleSignIn(@MessageBody() data: IWsAuthSignin) {
+  async handleSignIn(
+    @MessageBody() data: IWsAuthSignin,
+    @ConnectedSocket() client: Socket,
+  ) {
     if (!data.username)
-      return this.server.emit('logInError', 'username required!');
+      return this.server
+        .to(client.id)
+        .emit('signInError', 'username required!');
 
     if (!data.password)
-      return this.server.emit('logInError', 'password required!');
+      return this.server
+        .to(client.id)
+        .emit('signInError', 'password required!');
 
-    if (!data.email) return this.server.emit('logInError', 'email required!');
+    if (!data.email)
+      return this.server.to(client.id).emit('signInError', 'email required!');
 
     try {
       const token = await this.service.signIn(data);
 
-      this.server.emit('jwtToken', token);
+      this.server.to(client.id).emit('jwtToken', token);
     } catch (err) {
       this.logger.error(`(signInError) handle error: ${err.message}`);
-      this.server.emit('signInError', err.message);
+      this.server.to(client.id).emit('signInError', err.message);
     }
   }
 }

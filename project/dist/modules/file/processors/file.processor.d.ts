@@ -5,7 +5,12 @@ export declare class FileProcessor {
     constructor(fileService: FileService);
     private readonly logger;
     saveFile(job: Job): Promise<{
-        filePath: string;
+        file: {
+            id: number;
+            filename: string;
+            filepath: string;
+            uploadAt: Date;
+        };
     }>;
     onActive(job: Job): void;
     onCompletedSave(job: Job): void;

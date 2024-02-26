@@ -4,11 +4,12 @@ import {
   Injectable,
   NestInterceptor,
 } from '@nestjs/common';
+import { Request } from 'express';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 
 @Injectable()
-export class PasswordInterceptor implements NestInterceptor {
+export class PasswordHtppInterceptor implements NestInterceptor {
   /**
    *
    * @param context
@@ -19,9 +20,15 @@ export class PasswordInterceptor implements NestInterceptor {
     context: ExecutionContext,
     next: CallHandler<any>,
   ): Observable<any> | Promise<Observable<any>> {
+    const req: Request = context.switchToHttp().getRequest();
+
     return next.handle().pipe(
-      map((data) => {
-        this.findPassword(data);
+      map(async (data) => {
+        if (
+          !req.path.includes('get/file') ||
+          !req.path.includes('download/file')
+        )
+          await this.findPassword(data);
 
         return data;
       }),
@@ -31,7 +38,7 @@ export class PasswordInterceptor implements NestInterceptor {
    *
    * @param obj
    */
-  private findPassword(obj: object) {
+  private async findPassword(obj: any) {
     for (const key in obj) {
       if (obj.hasOwnProperty(key)) {
         if (key === 'password') {

@@ -23,43 +23,111 @@ const comment_event_1 = require("../events/comment.event");
 const file_queue_service_1 = require("../../file/services/file-queue.service");
 const user_service_1 = require("../../user/services/user.service");
 const regex_1 = require("../../../common/regex");
+const cache_manager_1 = require("@nestjs/cache-manager");
 let CommentService = CommentService_1 = class CommentService {
-    constructor(repository, eventEmitter, userService, fileQueueService) {
+    constructor(repository, eventEmitter, userService, fileQueueService, cacheManager) {
         this.repository = repository;
         this.eventEmitter = eventEmitter;
         this.userService = userService;
         this.fileQueueService = fileQueueService;
+        this.cacheManager = cacheManager;
         this.logger = new common_1.Logger(CommentService_1.name);
         this.defaultOrderBy = {
             createdAt: 'DESC',
         };
     }
-    async onModuleInit() {
-    }
-    async onModuleDestroy() {
-    }
-    async findOne(where, orderBy) {
+    async findOne(where) {
+        const cacheData = await this.cacheManager.get(`COMMENTS#ONE#${JSON.stringify(where)}`);
+        if (cacheData)
+            return cacheData;
         const comment = await this.repository.findOne({
-            where: where,
-            order: orderBy ? orderBy : this.defaultOrderBy,
+            where: { ...where, parent: null },
             relations: {
                 author: true,
+                comments: true,
+                file: true,
             },
         });
         if (!comment)
             return null;
+        await this.cacheManager.set(`COMMENTS#ONE#${JSON.stringify(where)}`, comment);
+        const newCommentCreateCacheEvent = new comment_event_1.CommentCreateCacheEvent();
+        newCommentCreateCacheEvent.key = `COMMENTS#ONE#${JSON.stringify(where)}`;
+        this.eventEmitter.emit('comment.create.cache', newCommentCreateCacheEvent);
         return comment;
     }
     async findMany(page, limit, where, orderBy) {
-        const comments = await this.repository.find({
-            where: where,
-            order: orderBy ? orderBy : this.defaultOrderBy,
-            take: limit,
-            skip: (page - 1) * limit,
-            relations: {
-                author: true,
-            },
-        });
+        const cacheData = await this.cacheManager.get(`COMMENTS#MANY#${page}#${limit}#${JSON.stringify(where)}#${JSON.stringify(orderBy)}`);
+        if (cacheData)
+            return cacheData;
+        const queryBuilder = this.repository.createQueryBuilder('comment');
+        queryBuilder.leftJoinAndSelect('comment.file', 'file');
+        queryBuilder.leftJoinAndSelect('comment.author', 'author');
+        queryBuilder.leftJoinAndSelect('comment.comments', 'comments');
+        queryBuilder.where('comment.parent IS NULL');
+        if (where) {
+            Object.keys(where).forEach((key) => {
+                queryBuilder.andWhere(`comment.${key} = :${key}`, {
+                    [key]: where[key],
+                });
+            });
+        }
+        if (orderBy) {
+            if (orderBy.sort === 'ASC') {
+                if (orderBy.column !== 'username') {
+                    queryBuilder.orderBy(`comment.${orderBy.column}`, 'ASC');
+                }
+            }
+            else {
+                if (orderBy.column !== 'username') {
+                    queryBuilder.orderBy(`comment.${orderBy.column}`, 'DESC');
+                }
+            }
+        }
+        else {
+            queryBuilder.orderBy('comment.createdAt', 'DESC');
+        }
+        const comments = await queryBuilder.getMany();
+        if (orderBy && orderBy.column === 'username' && orderBy.sort === 'ASC')
+            comments.sort((a, b) => {
+                const authorA = a.author?.username || a.anonymAuthor.username;
+                const authorB = b.author?.username || b.anonymAuthor.username;
+                return authorA.localeCompare(authorB);
+            });
+        else if (orderBy &&
+            orderBy.column === 'username' &&
+            orderBy.sort === 'DESC')
+            comments.sort((a, b) => {
+                const authorA = a.author?.username || a.anonymAuthor.username;
+                const authorB = b.author?.username || b.anonymAuthor.username;
+                return authorB.localeCompare(authorA);
+            });
+        const data = await (await this.loadCircularChildren(comments)).slice((page - 1) * limit, (page - 1) * limit + 25);
+        const total = await this.repository.find();
+        const newCacheData = {
+            comments: data,
+            currentPage: page,
+            pages: Math.ceil(total.length / limit),
+        };
+        await this.cacheManager.set(`COMMENTS#MANY#${page}#${limit}#${JSON.stringify(where)}#${JSON.stringify(orderBy)}`, newCacheData);
+        const commentCreateCacheEvent = new comment_event_1.CommentCreateCacheEvent();
+        commentCreateCacheEvent.key = `COMMENTS#MANY#${page}#${limit}#${JSON.stringify(where)}#${JSON.stringify(orderBy)}`;
+        this.eventEmitter.emit('comment.create.cache', commentCreateCacheEvent);
+        return newCacheData;
+    }
+    async loadCircularChildren(comments) {
+        for (const comment of comments) {
+            comment.comments = await this.repository
+                .createQueryBuilder('comment')
+                .where(`comment.parent = ${comment.id}`)
+                .leftJoinAndSelect('comment.file', 'file')
+                .leftJoinAndSelect('comment.author', 'author')
+                .leftJoinAndSelect('comment.comments', 'comments')
+                .getMany();
+            if (comment.comments.length > 0) {
+                comment.comments = await this.loadCircularChildren(comment.comments);
+            }
+        }
         return comments;
     }
     async createOne(createData, file) {
@@ -100,7 +168,7 @@ let CommentService = CommentService_1 = class CommentService {
             await job
                 .finished()
                 .then((result) => {
-                newComment.filePath = result.filePath;
+                newComment.file = result.file;
             })
                 .catch((err) => {
                 throw new common_1.BadRequestException(err.message);
@@ -143,9 +211,10 @@ exports.CommentService = CommentService;
 exports.CommentService = CommentService = CommentService_1 = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, typeorm_1.InjectRepository)(comment_entity_1.Comment)),
+    __param(4, (0, common_1.Inject)(cache_manager_1.CACHE_MANAGER)),
     __metadata("design:paramtypes", [typeorm_2.Repository,
         event_emitter_1.EventEmitter2,
         user_service_1.UserService,
-        file_queue_service_1.FileQueueService])
+        file_queue_service_1.FileQueueService, Object])
 ], CommentService);
 //# sourceMappingURL=comment.service.js.map

@@ -11,11 +11,23 @@ import {
   NEST_CONSTANTS,
 } from 'src/common/constant';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { FileUploadedEvent } from '../events/file.event';
+import {
+  FileCreatedEvent,
+  FileResizedEvent,
+  FileUploadedEvent,
+} from '../events/file.event';
+import { File } from '../entities/file.entity';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { IFileCreateData } from '../interfaces/file.interfaces';
 
 @Injectable()
 export class FileService implements OnModuleInit {
-  constructor(private readonly eventEmitter: EventEmitter2) {}
+  constructor(
+    @InjectRepository(File)
+    private readonly repository: Repository<File>,
+    private readonly eventEmitter: EventEmitter2,
+  ) {}
 
   private readonly logger: Logger = new Logger(FileService.name);
   /**
@@ -37,11 +49,29 @@ export class FileService implements OnModuleInit {
     }
   }
   /**
+   *
+   * @param createData
+   * @returns
+   */
+  async createOne(createData: IFileCreateData): Promise<File> {
+    const newFile = await this.repository.create(createData);
+    const savedFile = await this.repository.save(newFile);
+
+    const createdFileEvent = new FileCreatedEvent();
+    createdFileEvent.id = savedFile.id;
+    createdFileEvent.filename = savedFile.filename;
+    this.eventEmitter.emit('file.created', createdFileEvent);
+
+    return savedFile;
+  }
+  /**
    * Check image resolution
    * @param file
    * @returns boolean
    */
-  async checkImageResolution(file: Express.Multer.File): Promise<boolean> {
+  private async checkImageResolution(
+    file: Express.Multer.File,
+  ): Promise<boolean> {
     try {
       const fileResolution = sizeOf.imageSize(file.buffer);
 
@@ -86,7 +116,7 @@ export class FileService implements OnModuleInit {
    * @param file
    * @returns void
    */
-  async saveFile(fileData: Express.Multer.File): Promise<Express.Multer.File> {
+  async saveFile(fileData: Express.Multer.File) {
     let file = fileData as Express.Multer.File;
 
     if (file.buffer instanceof Buffer === false)
@@ -94,6 +124,7 @@ export class FileService implements OnModuleInit {
 
     let destination: string;
     const uniqueSuffix = Math.round(Math.random() * 1e9);
+    const preOriginalName = file.originalname;
     file.originalname = uniqueSuffix + extname(file.originalname);
 
     const fileMimeType = file.mimetype
@@ -104,7 +135,13 @@ export class FileService implements OnModuleInit {
       destination = 'images';
       const validResolution = await this.checkImageResolution(file);
 
-      if (!validResolution) file = await this.resizeImage(file);
+      if (!validResolution) {
+        file = await this.resizeImage(file);
+
+        const fileResizedEvent = new FileResizedEvent();
+        fileResizedEvent.filename = preOriginalName;
+        this.eventEmitter.emit('file.resized', fileResizedEvent);
+      }
     } else {
       destination = 'text';
     }
@@ -121,10 +158,12 @@ export class FileService implements OnModuleInit {
       fileUploadedEvent.size = file.size;
       this.eventEmitter.emit('file.uploaded', fileUploadedEvent);
 
-      return {
-        ...file,
-        path: `${NEST_CONSTANTS.UPLOAD_DIR}/${destination}/${file.originalname}`,
-      };
+      const createdFile = await this.createOne({
+        filename: preOriginalName,
+        filepath: `${NEST_CONSTANTS.UPLOAD_DIR}/${destination}/${file.originalname}`,
+      });
+
+      return { ...createdFile };
     } catch (err) {
       this.logger.error(`Failed fs write file: ${err.message}`);
 

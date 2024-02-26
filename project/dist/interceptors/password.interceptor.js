@@ -6,17 +6,20 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
     return c > 3 && r && Object.defineProperty(target, key, r), r;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.PasswordInterceptor = void 0;
+exports.PasswordHtppInterceptor = void 0;
 const common_1 = require("@nestjs/common");
 const operators_1 = require("rxjs/operators");
-let PasswordInterceptor = class PasswordInterceptor {
+let PasswordHtppInterceptor = class PasswordHtppInterceptor {
     intercept(context, next) {
-        return next.handle().pipe((0, operators_1.map)((data) => {
-            this.findPassword(data);
+        const req = context.switchToHttp().getRequest();
+        return next.handle().pipe((0, operators_1.map)(async (data) => {
+            if (!req.path.includes('get/file') ||
+                !req.path.includes('download/file'))
+                await this.findPassword(data);
             return data;
         }));
     }
-    findPassword(obj) {
+    async findPassword(obj) {
         for (const key in obj) {
             if (obj.hasOwnProperty(key)) {
                 if (key === 'password') {
@@ -29,8 +32,8 @@ let PasswordInterceptor = class PasswordInterceptor {
         }
     }
 };
-exports.PasswordInterceptor = PasswordInterceptor;
-exports.PasswordInterceptor = PasswordInterceptor = __decorate([
+exports.PasswordHtppInterceptor = PasswordHtppInterceptor;
+exports.PasswordHtppInterceptor = PasswordHtppInterceptor = __decorate([
     (0, common_1.Injectable)()
-], PasswordInterceptor);
+], PasswordHtppInterceptor);
 //# sourceMappingURL=password.interceptor.js.map

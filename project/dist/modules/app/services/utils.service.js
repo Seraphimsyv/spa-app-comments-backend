@@ -22,12 +22,32 @@ let UtilsService = UtilsService_1 = class UtilsService {
             if (!fs.existsSync(filePath)) {
                 return res.status(404).send('File not found!');
             }
-            const fileStream = fs.createReadStream(filePath);
-            fileStream.pipe(res);
+            if (dir === 'images') {
+                const fileStream = fs.createReadStream(filePath);
+                fileStream.pipe(res);
+            }
+            else {
+                const fileContent = fs.readFileSync(filePath, 'utf-8');
+                return res.status(200).send(fileContent);
+            }
         }
         catch (error) {
             this.logger.error(`Error serving file: ${error}`);
             throw new common_1.InternalServerErrorException(error, 'Error serving file');
+        }
+    }
+    async downloadFile(res, dir, filename) {
+        try {
+            const filePath = `${constant_1.NEST_CONSTANTS.UPLOAD_DIR}/${dir}/${filename}`;
+            if (!fs.existsSync(filePath)) {
+                return res.status(404).send('File not found!');
+            }
+            res.setHeader('Content-Disposition', `attachment; filename=${filename}`);
+            res.setHeader('Content-Type', 'text/plain');
+            res.download(filePath);
+        }
+        catch (err) {
+            console.log(err);
         }
     }
     async generateCaptcha() {

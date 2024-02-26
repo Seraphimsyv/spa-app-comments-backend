@@ -22,6 +22,9 @@ let UtilsController = class UtilsController {
     async getFile(dir, filename, res) {
         return await this.service.serveFile(res, dir, filename);
     }
+    async downloadFile(dir, filename, res) {
+        return this.service.downloadFile(res, dir, filename);
+    }
     async getCaptcha() {
         return await this.service.generateCaptcha();
     }
@@ -36,6 +39,15 @@ __decorate([
     __metadata("design:paramtypes", [String, String, Object]),
     __metadata("design:returntype", Promise)
 ], UtilsController.prototype, "getFile", null);
+__decorate([
+    (0, common_1.Get)('/download/file/:dir/:filename'),
+    __param(0, (0, common_1.Param)('dir')),
+    __param(1, (0, common_1.Param)('filename')),
+    __param(2, (0, common_1.Res)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String, Object]),
+    __metadata("design:returntype", Promise)
+], UtilsController.prototype, "downloadFile", null);
 __decorate([
     (0, common_1.Get)('/get/captcha'),
     __metadata("design:type", Function),

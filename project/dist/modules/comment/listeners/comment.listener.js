@@ -18,11 +18,20 @@ let CommentListener = CommentListener_1 = class CommentListener {
     constructor() {
         this.logger = new common_1.Logger(CommentListener_1.name);
     }
+    async handleCommentCreateCacheEvent(event) {
+        this.logger.debug(`Comment create cache: ${JSON.stringify(event)}`);
+    }
     async handleCommentCreatedEvent(event) {
         this.logger.debug(`Comment created event: ${JSON.stringify(event)}`);
     }
 };
 exports.CommentListener = CommentListener;
+__decorate([
+    (0, event_emitter_1.OnEvent)('comment.create.cache'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [comment_event_1.CommentCreateCacheEvent]),
+    __metadata("design:returntype", Promise)
+], CommentListener.prototype, "handleCommentCreateCacheEvent", null);
 __decorate([
     (0, event_emitter_1.OnEvent)('comment.created'),
     __metadata("design:type", Function),

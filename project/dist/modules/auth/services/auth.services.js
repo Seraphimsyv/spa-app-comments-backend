@@ -30,6 +30,7 @@ let AuthService = class AuthService {
         const isCompare = await this.validatePassword(password, user.password);
         if (!isCompare)
             throw new common_1.UnauthorizedException();
+        console.log(user);
         const payload = { ...user, password: undefined };
         const token = await this.generatePayloadToken(payload);
         const authLoginEvent = new auth_event_1.AuthLoginEvent();

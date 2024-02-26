@@ -12,6 +12,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.Comment = void 0;
 const typeorm_1 = require("typeorm");
 const user_entity_1 = require("../../user/entities/user.entity");
+const file_entity_1 = require("../../file/entities/file.entity");
 let Comment = class Comment {
 };
 exports.Comment = Comment;
@@ -24,15 +25,16 @@ __decorate([
     __metadata("design:type", String)
 ], Comment.prototype, "text", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ type: 'text', nullable: true }),
-    __metadata("design:type", String)
-], Comment.prototype, "filePath", void 0);
+    (0, typeorm_1.OneToOne)(() => file_entity_1.File, { nullable: true }),
+    (0, typeorm_1.JoinColumn)(),
+    __metadata("design:type", file_entity_1.File)
+], Comment.prototype, "file", void 0);
 __decorate([
-    (0, typeorm_1.ManyToOne)(() => Comment, (comment) => comment.parent, { nullable: true }),
+    (0, typeorm_1.ManyToOne)(() => Comment, (comment) => comment.comments, { nullable: true }),
     __metadata("design:type", Comment)
 ], Comment.prototype, "parent", void 0);
 __decorate([
-    (0, typeorm_1.OneToMany)(() => Comment, (comment) => comment.comments),
+    (0, typeorm_1.OneToMany)(() => Comment, (comment) => comment.parent),
     __metadata("design:type", Array)
 ], Comment.prototype, "comments", void 0);
 __decorate([

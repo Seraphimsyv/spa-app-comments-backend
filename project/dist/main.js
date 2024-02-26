@@ -5,8 +5,12 @@ const app_module_1 = require("./modules/app/app.module");
 const common_1 = require("@nestjs/common");
 const xssValidation_pipe_1 = require("./pipes/xssValidation.pipe");
 const constant_1 = require("./common/constant");
+const logger = (req, res, next) => {
+    console.log(req);
+};
 const bootstrap = async () => {
     const app = await core_1.NestFactory.create(app_module_1.AppModule);
+    app.use(logger);
     app.useGlobalPipes(new common_1.ValidationPipe({
         transform: true,
         transformOptions: {
@@ -14,7 +18,9 @@ const bootstrap = async () => {
         },
     }), new xssValidation_pipe_1.XssValidationPipe());
     app.setGlobalPrefix('api');
-    await app.listen(constant_1.NEST_CONSTANTS.PORT, constant_1.NEST_CONSTANTS.HOST);
+    await app.listen(constant_1.NEST_CONSTANTS.PORT, constant_1.NEST_CONSTANTS.HOST, () => {
+        console.log(`Server starting on ${constant_1.NEST_CONSTANTS.HOST}:${constant_1.NEST_CONSTANTS.PORT}`);
+    });
 };
 bootstrap();
 //# sourceMappingURL=main.js.map
